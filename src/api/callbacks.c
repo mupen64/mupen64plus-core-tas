@@ -33,8 +33,9 @@
 
 /* local variables */
 static ptr_DebugCallback pDebugFunc = NULL;
-static ptr_StateCallback pStateFunc = NULL;
 static void *            DebugContext = NULL;
+
+static ptr_StateCallback pStateFunc = NULL;
 static void *            StateContext = NULL;
 
 /* global Functions for use by the Core */
