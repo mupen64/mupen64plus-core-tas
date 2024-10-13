@@ -541,6 +541,7 @@ SOURCE = \
     $(SRCDIR)/api/config.c \
     $(SRCDIR)/api/debugger.c \
     $(SRCDIR)/api/frontend.c \
+    $(SRCDIR)/api/tas_callbacks.c \
     $(SRCDIR)/api/vidext.c \
     $(SRCDIR)/backends/api/video_capture_backend.c \
     $(SRCDIR)/backends/plugins_compat/audio_plugin_compat.c \
@@ -645,6 +646,10 @@ endif
 ifeq ($(NETPLAY), 1)
 CFLAGS += -DM64P_NETPLAY
 SOURCE += $(SRCDIR)/main/netplay.c
+endif
+
+ifeq ($(TAS), 1)
+CFLAGS += -DM64P_TAS
 endif
 
 # source files for optional features
@@ -789,6 +794,7 @@ targets:
 	@echo "    PIC=(1|0)      == Force enable/disable of position independent code"
 	@echo "    OSD=(1|0)      == Enable/disable build of OpenGL On-screen display"
 	@echo "    NETPLAY=1      == Enable netplay functionality, requires SDL2_net"
+	@echo "    TAS=1          == enable TAS callbacks"
 	@echo "    NEW_DYNAREC=1  == Replace dynamic recompiler with Ari64's experimental dynarec"
 	@echo "    KEYBINDINGS=0  == Disables the default keybindings"
 	@echo "    ACCURATE_FPU=1 == Enables accurate FPU behavior (i.e correct cause bits)"

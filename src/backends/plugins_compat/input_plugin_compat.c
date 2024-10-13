@@ -19,6 +19,7 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.          *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include "api/tas_callbacks.h"
 #include "plugins_compat.h"
 
 #include "api/m64p_plugin.h"
@@ -84,6 +85,11 @@ static m64p_error input_plugin_get_input(void* opaque, uint32_t* input_)
         cin_compat->last_input = keys.Value; //disable pak switching for netplay
         cin_compat->last_pak_type = Controls[cin_compat->control_id].Plugin; //disable pak switching for netplay
     }
+    
+    /* Filter this input through the frontend if requested */
+#ifdef M64P_TAS
+    keys = tas_filter_inputs(cin_compat->control_id, keys);
+#endif
 
     /* return an error if controller is not plugged */
     if (!Controls[cin_compat->control_id].Present) {

@@ -98,7 +98,8 @@ typedef enum {
 typedef enum {
   M64CAPS_DYNAREC = 1,
   M64CAPS_DEBUGGER = 2,
-  M64CAPS_CORE_COMPARE = 4
+  M64CAPS_CORE_COMPARE = 4,
+  M64CAPS_TAS_CALLBACKS = (1 << 16),
 } m64p_core_caps;
 
 typedef enum {

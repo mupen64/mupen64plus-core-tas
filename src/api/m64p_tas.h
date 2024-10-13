@@ -12,9 +12,9 @@ extern "C" {
 #endif
 
 
-typedef void (*ptr_InputFilterCallback)(void* context, int port, BUTTONS* input);
-typedef void (*ptr_AudioRateCallback)(void* context, unsigned int new_rate);
-typedef void (*ptr_AudioSampleCallback)(void* context, void* samples, size_t length);
+typedef void (*m64p_input_filter_callback)(void* context, int port, BUTTONS* input);
+typedef void (*m64p_audio_rate_callbck)(void* context, unsigned int new_rate);
+typedef void (*m64p_audio_sample_callback)(void* context, const void* samples, size_t length);
 
 typedef struct {
   uint32_t id_code;
@@ -30,9 +30,9 @@ typedef struct {
  * This function sets the input callback, which allows the frontend to read controller input
  * and potentially override it.
  */
-typedef void (*ptr_CoreTAS_SetInputCallback)(void* context, ptr_InputFilterCallback callback);
+typedef m64p_error (*ptr_CoreTAS_SetInputCallback)(void* context, m64p_input_filter_callback callback);
 #ifdef M64P_CORE_PROTOTYPES
-EXPORT void CALL CoreTAS_SetInputFilterCallback(void* context, ptr_InputFilterCallback callback);
+EXPORT m64p_error CALL CoreTAS_SetInputFilterCallback(void* context, m64p_input_filter_callback callback);
 #endif
 
 /* CoreTAS_SetAudioCallbacks()
@@ -46,9 +46,9 @@ EXPORT void CALL CoreTAS_SetInputFilterCallback(void* context, ptr_InputFilterCa
  *
  * This function will error with M64ERR_INPUT_ASSERT if one callback is non-NULL and the other is.
  */
-typedef m64p_error (*ptr_CoreTAS_SetAudioCallbacks)(void* context, ptr_AudioRateCallback rate_callback, ptr_AudioSampleCallback sample_callback);
+typedef m64p_error (*ptr_CoreTAS_SetAudioCallbacks)(void* context, m64p_audio_rate_callbck rate_callback, m64p_audio_sample_callback sample_callback);
 #ifdef M64P_CORE_PROTOTYPES
-EXPORT m64p_error CALL CoreTAS_SetAudioCallbacks(void* context, ptr_AudioRateCallback rate_callback, ptr_AudioSampleCallback sample_callback);
+EXPORT m64p_error CALL CoreTAS_SetAudioCallbacks(void* context, m64p_audio_rate_callbck rate_callback, m64p_audio_sample_callback sample_callback);
 #endif
 
 /* CoreTAS_SetAudioTapEnabled()

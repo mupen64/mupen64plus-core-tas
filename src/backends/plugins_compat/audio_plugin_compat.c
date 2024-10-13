@@ -28,9 +28,14 @@
 #include "device/rdram/rdram.h"
 #include "main/rom.h"
 #include "plugin/plugin.h"
+#include "api/tas_callbacks.h"
 
 static void audio_plugin_set_frequency(void* aout, unsigned int frequency)
 {
+#ifdef M64P_TAS
+    tas_rate_changed(frequency);
+#endif
+
     struct ai_controller* ai = (struct ai_controller*)aout;
     uint32_t saved_ai_dacrate = ai->regs[AI_DACRATE_REG];
 
@@ -43,6 +48,9 @@ static void audio_plugin_set_frequency(void* aout, unsigned int frequency)
 
 static void audio_plugin_push_samples(void* aout, const void* buffer, size_t size)
 {
+#ifdef M64P_TAS
+    tas_push_samples(buffer, size);
+#endif
     /* abuse core & audio plugin implementation to approximate desired effect */
     struct ai_controller* ai = (struct ai_controller*)aout;
     uint32_t saved_ai_length = ai->regs[AI_LEN_REG];

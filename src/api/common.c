@@ -58,6 +58,9 @@ EXPORT m64p_error CALL PluginGetVersion(m64p_plugin_type *PluginType, int *Plugi
 #if defined(COMPARE_CORE)
         *Capabilities |= M64CAPS_CORE_COMPARE;
 #endif
+#if defined(M64P_TAS)
+        *Capabilities |= M64CAPS_TAS_CALLBACKS;
+#endif
     }
                     
     return M64ERR_SUCCESS;
