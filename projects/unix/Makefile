@@ -721,6 +721,7 @@ ifeq ($(LIRC), 1)
   LDLIBS += -llirc_client
 endif
 
+KEYBINDINGS ?= 0
 ifeq ($(KEYBINDINGS), 0)
 	CFLAGS += -DNO_KEYBINDINGS
 endif
