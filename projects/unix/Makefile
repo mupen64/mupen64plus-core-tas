@@ -787,7 +787,7 @@ targets:
 	@echo "    PIC=(1|0)      == Force enable/disable of position independent code"
 	@echo "    OSD=(1|0)      == Enable/disable build of OpenGL On-screen display"
 	@echo "    NETPLAY=1      == Enable netplay functionality, requires SDL2_net"
-	@echo "    TAS=1          == enable TAS callbacks"
+	@echo "    TAS=(1|0)      == enable TAS callbacks (default: 1)"
 	@echo "    NEW_DYNAREC=1  == Replace dynamic recompiler with Ari64's experimental dynarec"
 	@echo "    KEYBINDINGS=0  == Disables the default keybindings"
 	@echo "    ACCURATE_FPU=1 == Enables accurate FPU behavior (i.e correct cause bits)"

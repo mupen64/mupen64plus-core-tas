@@ -423,6 +423,10 @@
     <ClCompile Include="..\..\src\device\r4300\new_dynarec\arm64\assem_arm64.c">
       <Filter>device\r4300\new_dynarec\arm64</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\device\r4300\cp2.c" />
+    <ClCompile Include="..\..\src\api\tas_callbacks.c">
+      <Filter>api</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\api\callbacks.h">
@@ -772,6 +776,13 @@
     </ClInclude>
     <ClInclude Include="..\..\src\device\dd\disk.h">
       <Filter>device\dd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\device\r4300\cp2.h" />
+    <ClInclude Include="..\..\src\api\m64p_tas.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\api\tas_callbacks.h">
+      <Filter>api</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

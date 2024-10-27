@@ -3,5 +3,11 @@
 /.vscode
 /projects/unix/*.dll
 /src/asm_defines/*.h
+
 compile_commands.json
 .cache/
+
+# Visual Studio
+/projects/msvc/x64/
+/projects/msvc/Win32/
+.vs/
