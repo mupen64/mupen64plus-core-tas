@@ -872,6 +872,6 @@ $(OBJDIR)/subprojects/%.o: $(SUBDIR)/%.cpp
 
 $(TARGET): $(OBJECTS)
 	$(LINK.o) $^ $(LOADLIBES) $(LDLIBS) -o $@
-	if [ "$(SONAME)" != "" ]; then ln -sf $@ $(SONAME); fi
+	# if [ "$(SONAME)" != "" ]; then ln -sf $@ $(SONAME); fi
 
 .PHONY: all clean install uninstall targets
