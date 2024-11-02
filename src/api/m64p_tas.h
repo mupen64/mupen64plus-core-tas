@@ -11,33 +11,41 @@
 extern "C" {
 #endif
 
-
-typedef void (*m64p_input_filter_callback)(void* context, int port, BUTTONS* input);
-typedef void (*m64p_audio_rate_callbck)(void* context, unsigned int new_rate);
-typedef void (*m64p_audio_sample_callback)(void* context, const void* samples, size_t length);
+typedef struct {
+  void* context;
+  void (*filter_inputs)(void* context, int port, BUTTONS* input);
+} m64ptas_input_handler;
 
 typedef struct {
-  uint32_t id_code;
-  uint32_t version;
   void* context;
+  void (*set_audio_rate)(void* context, unsigned int new_rate);
+  void (*push_audio_samples)(void* context, const void* samples, size_t length);
+} m64ptas_audio_handler;
+
+typedef struct {
+  void* context;
+  uint32_t signature;
+  uint32_t version;
+  size_t alloc_size;
   
-  m64p_error (*save_extra_data)(void* context, void** data, size_t* length);
-  m64p_error (*load_extra_data)(void* context, void* data, size_t length);
+  void (*save_extra_data)(void* context, char* data, size_t length);
+  size_t (*get_data_size)(void* context, uint32_t version);
+  void (*load_extra_data)(void* context, uint32_t version, const char* data, size_t length);
 } m64ptas_save_handler;
 
-/* CoreTAS_SetInputCallback()
+/* CoreTAS_SetInputHandler()
  *
- * This function sets the input callback, which allows the frontend to read controller input
+ * This function sets the input handler, which allows the frontend to read controller input
  * and potentially override it.
  */
-typedef m64p_error (*ptr_CoreTAS_SetInputCallback)(void* context, m64p_input_filter_callback callback);
+typedef m64p_error (*ptr_CoreTAS_SetInputHandler)(const m64ptas_input_handler* input_handler);
 #ifdef M64P_CORE_PROTOTYPES
-EXPORT m64p_error CALL CoreTAS_SetInputFilterCallback(void* context, m64p_input_filter_callback callback);
+EXPORT m64p_error CALL CoreTAS_SetInputHandler(const m64ptas_input_handler* input_handler);
 #endif
 
-/* CoreTAS_SetAudioCallbacks()
+/* CoreTAS_SetAudioHandler()
  * 
- * This function sets the audio callbacks, which allow the frontend to tap into audio output from
+ * This function sets the audio handler, which allow the frontend to extract audio output from
  * the core without going through an audio plugin. They can also be unset by passing NULL for 
  * both callbacks. Callbacks execute asynchronously; care must be taken to ensure thread safety.
  *
@@ -46,9 +54,9 @@ EXPORT m64p_error CALL CoreTAS_SetInputFilterCallback(void* context, m64p_input_
  *
  * This function will error with M64ERR_INPUT_ASSERT if one callback is non-NULL and the other is.
  */
-typedef m64p_error (*ptr_CoreTAS_SetAudioCallbacks)(void* context, m64p_audio_rate_callbck rate_callback, m64p_audio_sample_callback sample_callback);
+typedef m64p_error (*ptr_CoreTAS_SetAudioHandler)(const m64ptas_audio_handler* audio_handler);
 #ifdef M64P_CORE_PROTOTYPES
-EXPORT m64p_error CALL CoreTAS_SetAudioCallbacks(void* context, m64p_audio_rate_callbck rate_callback, m64p_audio_sample_callback sample_callback);
+EXPORT m64p_error CALL CoreTAS_SetAudioHandler(const m64ptas_audio_handler* audio_handler);
 #endif
 
 /* CoreTAS_SetAudioTapEnabled()

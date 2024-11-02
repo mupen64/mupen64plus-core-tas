@@ -39,6 +39,8 @@
 #include "api/config.h"
 #include "api/m64p_config.h"
 #include "api/m64p_types.h"
+#include "api/m64p_tas.h"
+#include "api/tas_callbacks.h"
 #include "backends/api/storage_backend.h"
 #include "device/device.h"
 #include "main/list.h"
@@ -251,6 +253,7 @@ static int savestates_load_m64p(struct device* dev, char *filepath)
     }
     curr += 32;
 
+
     /* Read the rest of the savestate */
     savestateSize = 16788244;
     savestateData = curr = (unsigned char *)malloc(savestateSize);
@@ -300,6 +303,57 @@ static int savestates_load_m64p(struct device* dev, char *filepath)
             return 0;
         }
     }
+
+    #ifdef M64P_TAS
+    const m64ptas_save_handler* save_handler = get_save_handler();
+    if (save_handler != NULL) {
+        char tas_header[sizeof(uint32_t) * 2];
+        if (gzread(f, tas_header, sizeof(tas_header)) != sizeof(tas_header)) {
+            main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Could not read extra data header from %s", filepath);
+            gzclose(f);
+            SDL_UnlockMutex(savestates_lock);
+            return 0;
+        }
+
+        uint32_t xd_signature = tas_header[0];
+        xd_signature = (xd_signature << 8) | tas_header[1];
+        xd_signature = (xd_signature << 8) | tas_header[2];
+        xd_signature = (xd_signature << 8) | tas_header[3];
+
+        if (xd_signature != save_handler->signature) {
+            main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Incorrect extra-data signature from %s", filepath);
+            gzclose(f);
+            SDL_UnlockMutex(savestates_lock);
+            return 0;
+        }
+
+        uint32_t xd_version = tas_header[0];
+        xd_version = (xd_version << 8) | tas_header[1];
+        xd_version = (xd_version << 8) | tas_header[2];
+        xd_version = (xd_version << 8) | tas_header[3];
+
+        size_t xd_size = save_handler->get_data_size(save_handler->context, xd_version);
+
+        char* xd_data = (char*) malloc(xd_size);
+        if (xd_data == NULL) {
+            main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Insufficient memory to load state.");
+            gzclose(f);
+            SDL_UnlockMutex(savestates_lock);
+            return 0;
+        }
+        if (gzread(f, xd_data, xd_size) != xd_size) {
+            main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Unable to load extra-data from %s", filepath);
+            gzclose(f);
+            SDL_UnlockMutex(savestates_lock);
+            return 0;
+        }    
+
+        save_handler->load_extra_data(save_handler->context, xd_version, xd_data, xd_size);
+
+        free(xd_data);
+    }
+
+    #endif
 
     gzclose(f);
     SDL_UnlockMutex(savestates_lock);
@@ -1544,8 +1598,19 @@ static int savestates_save_m64p(const struct device* dev, char *filepath)
 
     save_eventqueue_infos(&dev->r4300.cp0, queue);
 
-    // Allocate memory for the save state data
+    // Setup allocation size
     save->size = 16788288 + sizeof(queue) + 4 + 4096;
+
+    // get the TAS save handler, if available
+    #ifdef M64P_TAS
+    const m64ptas_save_handler* save_handler = get_save_handler();
+    if (save_handler != NULL) {
+        // signature + version + data
+        save->size += sizeof(uint32_t) * 2 + save_handler->alloc_size;
+    }
+    #endif
+
+    // Allocate memory for the save state data
     save->data = curr = malloc(save->size);
     if (save->data == NULL)
     {
@@ -1914,6 +1979,19 @@ static int savestates_save_m64p(const struct device* dev, char *filepath)
     /* cp0 and cp2 latch (since 1.9) */
     PUTDATA(curr, uint64_t, *r4300_cp0_latch((struct cp0*)&dev->r4300.cp0));
     PUTDATA(curr, uint64_t, *r4300_cp2_latch((struct cp2*)&dev->r4300.cp2));
+
+    #ifdef M64P_TAS
+    if (save_handler != NULL) {
+        PUTDATA(curr, uint32_t, save_handler->signature);
+        PUTDATA(curr, uint32_t, save_handler->version);
+        save_handler->save_extra_data(
+            save_handler->context, 
+            curr,
+            save_handler->alloc_size
+        );
+        curr += save_handler->alloc_size;
+    }
+    #endif
 
     init_work(&save->work, savestates_save_m64p_work);
     queue_work(&save->work);

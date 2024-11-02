@@ -9,8 +9,6 @@ extern void tas_rate_changed(unsigned int new_rate);
 
 extern void tas_push_samples(const void* data, size_t length);
 
-// extern void tas_save_savedata();
-
-// extern void tas_load_savedata();
+extern const m64ptas_save_handler* get_save_handler();
 
 #endif
