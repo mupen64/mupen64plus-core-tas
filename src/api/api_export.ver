@@ -81,4 +81,8 @@ VidExt_ResizeWindow;
 VidExt_GL_GetDefaultFramebuffer;
 VidExt_VK_GetSurface;
 VidExt_VK_GetInstanceExtensions;
+CoreTAS_SetInputHandler;
+CoreTAS_SetAudioHandler;
+CoreTAS_SetAudioTapEnabled;
+CoreTAS_SetSavestateHandler;
 local: *; };
