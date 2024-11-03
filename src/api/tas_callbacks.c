@@ -122,6 +122,13 @@ BUTTONS tas_filter_inputs(int port, BUTTONS input) {
   return input;
 }
 
+bool tas_override_present(int port) {
+  if (!input_handler_enabled)
+    return false;
+
+  return input_handler.poll_present(input_handler.context, port);
+}
+
 void tas_rate_changed(unsigned int new_rate) {
   // save the current audio rate
   cur_audio_rate = new_rate;

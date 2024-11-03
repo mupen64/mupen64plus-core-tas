@@ -14,6 +14,7 @@ extern "C" {
 typedef struct {
   void* context;
   void (*filter_inputs)(void* context, int port, BUTTONS* input);
+  bool (*poll_present)(void* context, int port);
 } m64ptas_input_handler;
 
 typedef struct {
@@ -29,8 +30,8 @@ typedef struct {
   size_t alloc_size;
   
   void (*save_extra_data)(void* context, char* data, size_t length);
-  size_t (*get_data_size)(void* context, uint32_t version);
   void (*load_extra_data)(void* context, uint32_t version, const char* data, size_t length);
+  size_t (*get_data_size)(void* context, uint32_t version);
 } m64ptas_save_handler;
 
 /* CoreTAS_SetInputHandler()

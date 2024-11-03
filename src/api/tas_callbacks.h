@@ -5,6 +5,8 @@
 
 extern BUTTONS tas_filter_inputs(int port, BUTTONS input);
 
+extern bool tas_override_present(int port);
+
 extern void tas_rate_changed(unsigned int new_rate);
 
 extern void tas_push_samples(const void* data, size_t length);

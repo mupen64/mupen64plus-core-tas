@@ -92,9 +92,15 @@ static m64p_error input_plugin_get_input(void* opaque, uint32_t* input_)
 #endif
 
     /* return an error if controller is not plugged */
+#ifdef M64P_TAS
+    if (!(Controls[cin_compat->control_id].Present || tas_override_present(cin_compat->control_id))) {
+        return M64ERR_SYSTEM_FAIL;
+    }
+#else
     if (!Controls[cin_compat->control_id].Present) {
         return M64ERR_SYSTEM_FAIL;
     }
+#endif
 
 
     /* has Controls[i].Plugin changed since last call */
