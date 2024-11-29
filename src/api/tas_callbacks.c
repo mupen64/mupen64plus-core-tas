@@ -1,6 +1,7 @@
 #include "api/m64p_types.h"
 #include <stddef.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
 
