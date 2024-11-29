@@ -22,6 +22,7 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.          *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include "SDL_mutex.h"
 #include <SDL.h>
 #include <SDL_thread.h>
 #include <stddef.h>
@@ -201,6 +202,14 @@ static int savestates_load_m64p(struct device* dev, char *filepath)
     unsigned char using_tlb_data[4];
     unsigned char data_0001_0200[4096]; // 4k for extra state from v1.2
 
+    #ifdef M64P_TAS
+    const m64ptas_save_handler* save_handler;
+    char xd_header[2 * sizeof(uint32_t)];
+    uint32_t xd_version;
+    char* xd_data;
+    size_t xd_len;
+    #endif
+
     uint32_t* cp0_regs = r4300_cp0_regs(&dev->r4300.cp0);
 
     SDL_LockMutex(savestates_lock);
@@ -253,6 +262,10 @@ static int savestates_load_m64p(struct device* dev, char *filepath)
     }
     curr += 32;
 
+    #ifdef M64P_TAS
+
+    #endif
+
 
     /* Read the rest of the savestate */
     savestateSize = 16788244;
@@ -304,6 +317,54 @@ static int savestates_load_m64p(struct device* dev, char *filepath)
             return 0;
         }
     }
+
+    #ifdef M64P_TAS
+    save_handler = get_save_handler();
+    if (save_handler) {
+        if (gzread(f, xd_header, sizeof(xd_header)) != sizeof(xd_header)) {
+            main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Extra data not included in %s", filepath);
+            save_handler = NULL;
+        }
+        else {
+            char* curr = xd_header;
+            uint32_t xd_signature = GETDATA(curr, uint32_t);
+            xd_version = GETDATA(curr, uint32_t);
+
+            if (xd_signature != save_handler->signature) {
+                main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Wrong XD signature [0x%08x] in %s", xd_signature, filepath);
+                free(savestateData);
+                gzclose(f);
+                SDL_LockMutex(savestates_lock);
+                return 0;
+            }
+
+            xd_len = save_handler->get_data_size(save_handler->context, xd_version);
+            if (xd_len == 0) {
+                main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Unsupported XD version [0x%08x] in %s", xd_version, filepath);
+                free(savestateData);
+                gzclose(f);
+                SDL_LockMutex(savestates_lock);
+                return 0;
+            }
+
+            xd_data = (char*) malloc(xd_len);
+            if (xd_data == NULL) {
+                main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Insufficient memory to load XD state");
+                free(savestateData);
+                gzclose(f);
+                SDL_LockMutex(savestates_lock);
+                return 0;
+            }
+            if (gzread(f, xd_data, xd_len) != xd_len) {
+                main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Failed to read XD state from %s", filepath);
+                free(savestateData);
+                gzclose(f);
+                SDL_LockMutex(savestates_lock);
+                return 0;
+            }
+        }
+    }
+    #endif
 
     gzclose(f);
     SDL_UnlockMutex(savestates_lock);
@@ -945,6 +1006,14 @@ static int savestates_load_m64p(struct device* dev, char *filepath)
         }
     }
 
+    #ifdef M64P_TAS
+    // Save handler will be cleared if there is no extra data to process.
+    if (save_handler) {
+        save_handler->load_extra_data(save_handler->context, xd_version, xd_data, xd_len);
+        free(xd_data);
+    }
+    #endif
+
     /* Zilmar-Spec plugin expect a call with control_id = -1 when RAM processing is done */
     if (input.controllerCommand) {
         input.controllerCommand(-1, NULL);
@@ -1531,6 +1600,11 @@ static int savestates_save_m64p(const struct device* dev, char *filepath)
     struct savestate_work *save;
     char *curr;
 
+    #ifdef M64P_TAS
+    const m64ptas_save_handler* save_handler;
+    size_t xd_start_index = 0;
+    #endif
+
     /* OK to cast away const qualifier */
     const uint32_t* cp0_regs = r4300_cp0_regs((struct cp0*)&dev->r4300.cp0);
 
@@ -1550,8 +1624,16 @@ static int savestates_save_m64p(const struct device* dev, char *filepath)
 
     // Setup allocation size
     save->size = 16788288 + sizeof(queue) + 4 + 4096;
-
+    
+    #ifdef M64P_TAS
     // get the TAS save handler, if available
+    save_handler = get_save_handler();
+    if (save_handler) {
+        const size_t header_size = 2 * sizeof(uint32_t);
+        xd_start_index = save->size;
+        save->size += header_size + save_handler->alloc_size;
+    }
+    #endif
 
     // Allocate memory for the save state data
     save->data = curr = malloc(save->size);
@@ -1922,6 +2004,16 @@ static int savestates_save_m64p(const struct device* dev, char *filepath)
     /* cp0 and cp2 latch (since 1.9) */
     PUTDATA(curr, uint64_t, *r4300_cp0_latch((struct cp0*)&dev->r4300.cp0));
     PUTDATA(curr, uint64_t, *r4300_cp2_latch((struct cp2*)&dev->r4300.cp2));
+
+    #ifdef M64P_TAS
+    if (save_handler) {
+        curr = &save->data[xd_start_index];
+        PUTDATA(curr, uint32_t, save_handler->signature);
+        PUTDATA(curr, uint32_t, save_handler->version);
+        save_handler->save_extra_data(save_handler->context, curr, save_handler->alloc_size);
+        curr += save_handler->alloc_size;
+    }
+    #endif
 
     init_work(&save->work, savestates_save_m64p_work);
     queue_work(&save->work);
