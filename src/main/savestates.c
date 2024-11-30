@@ -204,10 +204,9 @@ static int savestates_load_m64p(struct device* dev, char *filepath)
 
     #ifdef M64P_TAS
     const m64ptas_save_handler* save_handler;
-    char xd_header[2 * sizeof(uint32_t)];
-    uint32_t xd_version;
-    char* xd_data;
-    size_t xd_len;
+    unsigned char xd_header[2 * sizeof(uint32_t)];
+    uint32_t xd_size;
+    unsigned char* xd_data = NULL;
     #endif
 
     uint32_t* cp0_regs = r4300_cp0_regs(&dev->r4300.cp0);
@@ -326,42 +325,45 @@ static int savestates_load_m64p(struct device* dev, char *filepath)
             save_handler = NULL;
         }
         else {
-            char* curr = xd_header;
+            unsigned char* curr = xd_header;
             uint32_t xd_signature = GETDATA(curr, uint32_t);
-            xd_version = GETDATA(curr, uint32_t);
+            xd_size = GETDATA(curr, uint32_t);
 
             if (xd_signature != save_handler->signature) {
                 main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Wrong XD signature [0x%08x] in %s", xd_signature, filepath);
                 free(savestateData);
                 gzclose(f);
-                SDL_LockMutex(savestates_lock);
+                SDL_UnlockMutex(savestates_lock);
                 return 0;
             }
 
-            xd_len = save_handler->get_data_size(save_handler->context, xd_version);
-            if (xd_len == 0) {
-                main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Unsupported XD version [0x%08x] in %s", xd_version, filepath);
+            if (xd_size > 0) {
+                xd_data = (unsigned char*) malloc(xd_size);
+                if (xd_data == NULL) {
+                    main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Insufficient memory to load XD state");
+                    free(savestateData);
+                    gzclose(f);
+                    SDL_UnlockMutex(savestates_lock);
+                    return 0;
+                }
+                if (gzread(f, xd_data, xd_size) != xd_size) {
+                    main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Failed to read XD state from %s", filepath);
+                    free(savestateData);
+                    free(xd_data);
+                    gzclose(f);
+                    SDL_UnlockMutex(savestates_lock);
+                    return 0;
+                }
+            }
+            if (!save_handler->load_xd(save_handler->context, xd_data, xd_size)) {
+                main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Failed to parse XD state from %s", filepath);
                 free(savestateData);
+                free(xd_data);
                 gzclose(f);
-                SDL_LockMutex(savestates_lock);
+                SDL_UnlockMutex(savestates_lock);
                 return 0;
             }
-
-            xd_data = (char*) malloc(xd_len);
-            if (xd_data == NULL) {
-                main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Insufficient memory to load XD state");
-                free(savestateData);
-                gzclose(f);
-                SDL_LockMutex(savestates_lock);
-                return 0;
-            }
-            if (gzread(f, xd_data, xd_len) != xd_len) {
-                main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Failed to read XD state from %s", filepath);
-                free(savestateData);
-                gzclose(f);
-                SDL_LockMutex(savestates_lock);
-                return 0;
-            }
+            free(xd_data);
         }
     }
     #endif
@@ -1006,14 +1008,6 @@ static int savestates_load_m64p(struct device* dev, char *filepath)
         }
     }
 
-    #ifdef M64P_TAS
-    // Save handler will be cleared if there is no extra data to process.
-    if (save_handler) {
-        save_handler->load_extra_data(save_handler->context, xd_version, xd_data, xd_len);
-        free(xd_data);
-    }
-    #endif
-
     /* Zilmar-Spec plugin expect a call with control_id = -1 when RAM processing is done */
     if (input.controllerCommand) {
         input.controllerCommand(-1, NULL);
@@ -1603,6 +1597,7 @@ static int savestates_save_m64p(const struct device* dev, char *filepath)
     #ifdef M64P_TAS
     const m64ptas_save_handler* save_handler;
     size_t xd_start_index = 0;
+    uint32_t xd_size = 0;
     #endif
 
     /* OK to cast away const qualifier */
@@ -1631,7 +1626,8 @@ static int savestates_save_m64p(const struct device* dev, char *filepath)
     if (save_handler) {
         const size_t header_size = 2 * sizeof(uint32_t);
         xd_start_index = save->size;
-        save->size += header_size + save_handler->alloc_size;
+        xd_size = save_handler->get_xd_size(save_handler->context);
+        save->size += header_size + xd_size;
     }
     #endif
 
@@ -2009,9 +2005,18 @@ static int savestates_save_m64p(const struct device* dev, char *filepath)
     if (save_handler) {
         curr = &save->data[xd_start_index];
         PUTDATA(curr, uint32_t, save_handler->signature);
-        PUTDATA(curr, uint32_t, save_handler->version);
-        save_handler->save_extra_data(save_handler->context, curr, save_handler->alloc_size);
-        curr += save_handler->alloc_size;
+        PUTDATA(curr, uint32_t, xd_size);
+        if (xd_size > 0 && !save_handler->save_xd(
+            save_handler->context, (unsigned char*) curr, xd_size
+        )) {
+            free(save->data);
+            free(save->filepath);
+            free(save);
+            main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "XD could not be saved");
+            StateChanged(M64CORE_STATE_SAVECOMPLETE, 0);
+            return 0;
+        }
+        curr += xd_size;
     }
     #endif
 

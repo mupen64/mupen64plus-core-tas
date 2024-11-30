@@ -26,12 +26,10 @@ typedef struct {
 typedef struct {
   void* context;
   uint32_t signature;
-  uint32_t version;
-  size_t alloc_size;
   
-  void (*save_extra_data)(void* context, char* data, size_t length);
-  void (*load_extra_data)(void* context, uint32_t version, const char* data, size_t length);
-  size_t (*get_data_size)(void* context, uint32_t version);
+  uint32_t (*get_xd_size)(void* context);
+  bool (*save_xd)(void* context, unsigned char* data, uint32_t length);
+  bool (*load_xd)(void* context, const unsigned char* data, uint32_t length);
 } m64ptas_save_handler;
 
 /* CoreTAS_SetInputHandler()

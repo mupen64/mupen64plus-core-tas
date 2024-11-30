@@ -95,10 +95,9 @@ m64p_error CoreTAS_SetSavestateHandler(m64ptas_save_handler const* new_save_hand
   else {
     if (
       new_save_handler->signature == 0 ||
-      new_save_handler->alloc_size == 0 ||
-      new_save_handler->save_extra_data == NULL ||
-      new_save_handler->get_data_size == NULL ||
-      new_save_handler->load_extra_data == NULL
+      new_save_handler->save_xd == NULL ||
+      new_save_handler->get_xd_size == NULL ||
+      new_save_handler->load_xd == NULL
     ) {
       return M64ERR_INPUT_ASSERT;
     }
